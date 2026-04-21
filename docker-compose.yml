@@ -1,0 +1,20 @@
+services:
+  code-metric-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: code-metric-collector:latest
+    container_name: code-metric-collector
+    ports:
+      - "8082:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # Uncomment and set your GitHub PAT to avoid rate limiting
+      # - GitHub__Token=ghp_your_token_here
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/swagger/v1/swagger.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
