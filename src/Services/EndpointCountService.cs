@@ -18,11 +18,12 @@ public class EndpointCountService
         _logger = logger;
     }
 
-    public async Task<int> CountEndpointsAsync(string repositoryUrl)
+    public async Task<EndpointCountResult> CountEndpointsAsync(string repositoryUrl)
     {
         var files = await _gitHubService.GetControllerFilesAsync(repositoryUrl);
 
-        var total = 0;
+        var routes = new List<string>();
+        var seenRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in files)
         {
@@ -34,12 +35,21 @@ public class EndpointCountService
                 continue;
             }
 
-            var count = strategy.CountEndpoints(file.Content);
-            _logger.LogInformation("File '{FileName}' — {Count} endpoint(s) found.", file.Name, count);
-            total += count;
+            var fileRoutes = strategy.ExtractRoutes(file.Content);
+            _logger.LogInformation("File '{FileName}' — {Count} endpoint(s) found.", file.Name, fileRoutes.Count);
+
+            foreach (var route in fileRoutes)
+            {
+                if (seenRoutes.Add(route))
+                {
+                    routes.Add(route);
+                }
+            }
         }
 
-        _logger.LogInformation("Total endpoints found across {FileCount} file(s): {Total}", files.Count, total);
-        return total;
+        _logger.LogInformation("Total endpoints found across {FileCount} file(s): {Total}", files.Count, routes.Count);
+        return new EndpointCountResult(routes);
     }
 }
+
+public record EndpointCountResult(IReadOnlyList<string> Routes);

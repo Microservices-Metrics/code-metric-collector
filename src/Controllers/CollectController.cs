@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CodeMetricCollector.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("collect")]
 public class CollectController : ControllerBase
 {
     private readonly EndpointCountService _endpointCountService;
@@ -28,11 +28,11 @@ public class CollectController : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<CollectResponse>> Post([FromBody] CollectRequest request)
     {
-        int endpointCount;
+        EndpointCountResult endpointResult;
 
         try
         {
-            endpointCount = await _endpointCountService.CountEndpointsAsync(request.UrlControllers);
+            endpointResult = await _endpointCountService.CountEndpointsAsync(request.UrlControllers);
         }
         catch (ArgumentException ex)
         {
@@ -55,7 +55,7 @@ public class CollectController : ControllerBase
             Measurement = new MeasurementInfo
             {
                 ApiIdentifier = Guid.NewGuid().ToString(),
-                Value = endpointCount,
+                Routes = endpointResult.Routes.ToList(),
                 Unit = "operations",
                 Timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffffffZ")
             }

@@ -15,7 +15,8 @@ public class MetricInfo
 public class MeasurementInfo
 {
     public string ApiIdentifier { get; set; } = string.Empty;
-    public int Value { get; set; }
+    public List<string> Routes { get; set; } = [];
+    public int Value => Routes.Count;
     public string Unit { get; set; } = string.Empty;
     public string Timestamp { get; set; } = string.Empty;
 }
