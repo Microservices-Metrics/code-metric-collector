@@ -3,8 +3,32 @@ using System.Text.Json;
 using CodeMetricCollector.Services;
 using CodeMetricCollector.Services.Strategies;
 using Microsoft.OpenApi.Models;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+try
+{
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, configuration) =>
+{
+    var logPath = context.Configuration["Logging:FilePath"] ?? "logs/code-metric-collector.log";
+
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.Console(outputTemplate:
+            "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File(
+            path: logPath,
+            rollingInterval: RollingInterval.Infinite,
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -46,6 +70,12 @@ builder.Services.AddScoped<EndpointCountService>();
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate =
+        "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+});
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -58,3 +88,13 @@ app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
